@@ -45,13 +45,13 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
   Your browser does not support the audio element.
 </audio>
 
-Environment Configuration & Inference Guide for Hojo-TTS-Light
+### Environment Configuration & Inference Guide for Hojo-TTS-Light
 Environment Setup
-# Create a conda environment named hojo-tts with Python 3.12
+Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
 conda activate hojo-tts
 
-# Install inference dependencies
+### Install inference dependencies
 pip install -r requirements.infer.txt
 Download ONNX Models from HuggingFace
 Install the Download Tool
@@ -67,7 +67,7 @@ After downloading, ensure the following files exist in the onnx/ directory:
 - onnx/Hojo-TTS-Light-encoder.onnx
 - onnx/Hojo-TTS-Light-decoder.onnx
 
-# Run Inference
+### Run Inference
 python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
