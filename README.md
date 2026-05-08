@@ -36,11 +36,13 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 **Chinese Female Voice (Sample 2)**
 [female_zh_2.mp3](https://github.com/user-attachments/files/27513335/female_zh_95.mp3)
 
-## Environment Configuration \&amp; Inference Guide for Hojo\-TTS
+## Environment Configuration ; Inference Guide for Hojo\-TTS
 
 ###  Environment Setup
 
 ```bash
+git clone https://github.com/HojoAI/Hojo-TTS-Light.git
+cd Hojo-TTS-Light
 # Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
 
@@ -54,8 +56,8 @@ pip install -r requirements.infer.txt
 ### Download ONNX Models from HuggingFace
 
 ```bash
-git clone https://huggingface.co/HojoAI/Hojo-TTS-Light
-
+pip install -U "huggingface_hub[cli]"
+hf download HojoAI/Hojo-TTS-Light   --repo-type model   --include "onnx/*"   --local-dir .
 ```
 
 ####  Verify Downloaded Files
@@ -72,7 +74,7 @@ After downloading, ensure the following files exist in the `onnx/` directory:
 
 ```bash
 python infer_onnx.py \
-  --onnx_dir ./Hojo-TTS-Light/onnx \
+  --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
   --prompt-speech ./assets/zh1.wav \
   --prompt-text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
