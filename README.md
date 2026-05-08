@@ -1,3 +1,6 @@
+
+![License](http://www.apache.org/licenses/LICENSE-2.0)
+
 ## Hojo-TTS-Light
 **Hojo-TTS-Light** is an open-source lightweight Text-To-Speech model by HojoAI team.
 **With only 0.08B parameters**, that is, the parametere size of backbone LM is only **80M**, Hojo-TTS-Light can generate good enough quality speech.
