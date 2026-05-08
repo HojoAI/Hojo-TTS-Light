@@ -1,0 +1,19 @@
+{
+  "backend": "tokenizers",
+  "bos_token": "[START]",
+  "bos_token_id": 2,
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "[STOP]",
+  "eos_token_id": 3,
+  "is_local": true,
+  "max_length": null,
+  "model_max_length": 4096,
+  "pad_to_multiple_of": null,
+  "pad_token": "[STOP]",
+  "pad_token_id": 3,
+  "pad_token_type_id": 0,
+  "padding_side": "left",
+  "tokenizer_class": "TokenizersBackend",
+  "unk_token": "[UNK]",
+  "unk_token_id": 0
+}

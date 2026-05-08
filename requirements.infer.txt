@@ -1,0 +1,6 @@
+numpy==1.24.4
+onnxruntime==1.23.2
+soundfile==0.13.1
+torch==2.8.0+cu128
+torchaudio==2.8.0+cu128
+transformers==5.2.0
