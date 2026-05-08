@@ -18,7 +18,7 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
   
 ## Demo
 <audio controls>
-  <source src="assets/audio/zh1.wav" type="audio/mpeg">
+  <source src="assets/audio/zh1.mp3" type="audio/mpeg">
 </audio>
 
 ## Quick Start
