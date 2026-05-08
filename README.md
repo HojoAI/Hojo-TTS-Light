@@ -1,3 +1,4 @@
+![License](https://img.shields.io/badge/apache-2.0-license)
 
 
 ## Hojo-TTS-Light
