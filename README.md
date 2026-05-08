@@ -45,31 +45,52 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
   Your browser does not support the audio element.
 </audio>
 
-## Environment Configuration & Inference Guide
+## Environment Configuration \&amp; Inference Guide for Hojo\-TTS
 
-Environment Setup
-Create a conda environment named hojo-tts with Python 3.12
+###  Environment Setup
 
+```bash
+# Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
+
+# Activate the conda environment
 conda activate hojo-tts
 
-### Install inference dependencies
+# Install inference dependencies
 pip install -r requirements.infer.txt
-Download ONNX Models from HuggingFace
-Install the Download Tool
+```
+
+### Download ONNX Models from HuggingFace
+
+#### Install the Download Tool
+
+```bash
 pip install -U "huggingface_hub[cli]"
-Download the Models
-Replace <HF_MODEL_REPO_URL> with your actual HuggingFace model repository URL:
+```
+
+####  Download the Models
+
+Replace \&lt;HF\_MODEL\_REPO\_URL\&gt; with your actual HuggingFace model repository URL:
+
+```bash
 huggingface-cli download <HF_MODEL_REPO_URL> \
   --local-dir ./onnx \
   --local-dir-use-symlinks False
-Verify Downloaded Files
-After downloading, ensure the following files exist in the onnx/ directory:
-- onnx/Hojo-TTS-Light-llm.onnx
-- onnx/Hojo-TTS-Light-encoder.onnx
-- onnx/Hojo-TTS-Light-decoder.onnx
+```
 
-### Run Inference
+####  Verify Downloaded Files
+
+After downloading, ensure the following files exist in the `onnx/` directory:
+
+- onnx/Hojo\-TTS\-Light\-llm\.onnx
+
+- onnx/Hojo\-TTS\-Light\-encoder\.onnx
+
+- onnx/Hojo\-TTS\-Light\-decoder\.onnx
+
+###  Run Inference
+
+```bash
 python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
@@ -77,6 +98,7 @@ python infer_onnx.py \
   --prompt-text "Nowadays, food delivery is really full of pitfalls. Why don't we switch to a slightly more expensive one? Maybe the quality is better." \
   --text "How is the weather today." \
   --output-wav ./assets/out.wav
+```
 
 
   
