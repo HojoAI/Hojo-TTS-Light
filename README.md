@@ -83,7 +83,7 @@ python infer_onnx.py \
 ```
 
 ## Roadmap
-- [ ] support streaming mode synthesis, release optimized inference engine
+- [ ] support streaming mode synthesis
 - [ ] support emotion and style control
 - [ ] support multi-lingual and multi-dialect
 
