@@ -80,6 +80,12 @@ python infer_onnx.py \
   --output-wav ./assets/out.wav
 ```
 
+## Roadmap
+- [] Multilingual and multidialect
+- [] Emotional and style control
+
+  
+## Commercial Support
 
   
 ## Credits
