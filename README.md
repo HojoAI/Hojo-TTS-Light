@@ -96,8 +96,8 @@ python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
   --prompt-speech ./assets/zh1.wav \
-  --prompt-text "Nowadays, food delivery is really full of pitfalls. Why don't we switch to a slightly more expensive one? Maybe the quality is better." \
-  --text "How is the weather today." \
+  --prompt-text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
+  --text "今天天气怎么样。" \
   --output-wav ./assets/out.wav
 ```
 
