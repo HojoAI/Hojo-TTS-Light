@@ -48,8 +48,9 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 ### Environment Configuration & Inference Guide for Hojo-TTS-Light
 Environment Setup
 Create a conda environment named hojo-tts with Python 3.12
--conda create -n hojo-tts python=3.12 -y
--conda activate hojo-tts
+
+conda create -n hojo-tts python=3.12 -y
+conda activate hojo-tts
 
 ### Install inference dependencies
 pip install -r requirements.infer.txt
