@@ -49,8 +49,6 @@ Environment Configuration & Inference Guide for Hojo-TTS-Light
 Environment Setup
 # Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
-
-# Activate the conda environment
 conda activate hojo-tts
 
 # Install inference dependencies
