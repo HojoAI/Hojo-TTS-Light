@@ -68,7 +68,8 @@ After downloading, ensure the following files exist in the onnx/ directory:
 - onnx/Hojo-TTS-Light-llm.onnx
 - onnx/Hojo-TTS-Light-encoder.onnx
 - onnx/Hojo-TTS-Light-decoder.onnx
-Run Inference
+
+# Run Inference
 python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
