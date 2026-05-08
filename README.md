@@ -47,7 +47,38 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 
 
 ## Quick Start
-**TBD**
+环境配置
+
+conda create -n hojo-tts python=3.12 -y
+conda activate hojo-tts
+
+pip install -r requirements.infer.txt
+
+从 HuggingFace 下载 ONNX 模型
+先安装下载工具：
+pip install -U "huggingface_hub[cli]"
+
+下载（将 <HF_MODEL_REPO_URL> 替换为你的 HuggingFace 模型地址）：
+huggingface-cli download <HF_MODEL_REPO_URL> \
+  --local-dir ./onnx \
+  --local-dir-use-symlinks False
+
+
+下载后请确保 onnx/ 目录下有以下文件：
+
+onnx/Hojo-TTS-Light-llm.onnx
+onnx/Hojo-TTS-Light-encoder.onnx
+onnx/Hojo-TTS-Light-decoder.onnx
+
+推理运行：
+python infer_onnx.py \
+  --onnx_dir ./onnx \
+  --tokenizer_path ./tokenizer \
+  --prompt-speech ./assets/zh1.wav \
+  --prompt-text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
+  --text "今天天气怎么样。" \
+  --output-wav ./assets/out.wav
+  
 ## Credits
 - [X-Codec-2.0](https://github.com/zhenye234/X-Codec-2.0)
 - [soprano](https://github.com/ekwek1/soprano)
