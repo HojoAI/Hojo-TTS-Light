@@ -1,6 +1,6 @@
 
 [![github license](https://img.shields.io/github/license/HojoAI/Hojo-TTS-Light)]
-[![Hugging Face](https://img.shields.io/badge/Huggingface-Hojo-TTS-Light-yellow)]
+
 
 ## Hojo-TTS-Light
 **Hojo-TTS-Light** is an open-source lightweight Text-To-Speech model by HojoAI team.
