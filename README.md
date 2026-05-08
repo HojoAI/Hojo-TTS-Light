@@ -46,7 +46,7 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 </audio>
 
 Environment Configuration & Inference Guide for Hojo-TTS-Light
-1. Environment Setup
+Environment Setup
 # Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
 
@@ -55,20 +55,20 @@ conda activate hojo-tts
 
 # Install inference dependencies
 pip install -r requirements.infer.txt
-2. Download ONNX Models from HuggingFace
-2.1 Install the Download Tool
+Download ONNX Models from HuggingFace
+Install the Download Tool
 pip install -U "huggingface_hub[cli]"
-2.2 Download the Models
+Download the Models
 Replace <HF_MODEL_REPO_URL> with your actual HuggingFace model repository URL:
 huggingface-cli download <HF_MODEL_REPO_URL> \
   --local-dir ./onnx \
   --local-dir-use-symlinks False
-2.3 Verify Downloaded Files
+Verify Downloaded Files
 After downloading, ensure the following files exist in the onnx/ directory:
 - onnx/Hojo-TTS-Light-llm.onnx
 - onnx/Hojo-TTS-Light-encoder.onnx
 - onnx/Hojo-TTS-Light-decoder.onnx
-3. Run Inference
+Run Inference
 python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
