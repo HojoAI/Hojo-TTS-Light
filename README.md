@@ -53,20 +53,9 @@ pip install -r requirements.infer.txt
 
 ### Download ONNX Models from HuggingFace
 
-#### Install the Download Tool
-
 ```bash
-pip install -U "huggingface_hub[cli]"
-```
+git clone https://huggingface.co/HojoAI/Hojo-TTS-Light
 
-####  Download the Models
-
-Replace \&lt;HF\_MODEL\_REPO\_URL\&gt; with your actual HuggingFace model repository URL:
-
-```bash
-huggingface-cli download <HF_MODEL_REPO_URL> \
-  --local-dir ./onnx \
-  --local-dir-use-symlinks False
 ```
 
 ####  Verify Downloaded Files
@@ -83,7 +72,7 @@ After downloading, ensure the following files exist in the `onnx/` directory:
 
 ```bash
 python infer_onnx.py \
-  --onnx_dir ./onnx \
+  --onnx_dir ./Hojo-TTS-Light/onnx \
   --tokenizer_path ./tokenizer \
   --prompt-speech ./assets/zh1.wav \
   --prompt-text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
