@@ -81,8 +81,8 @@ python infer_onnx.py \
 ```
 
 ## Roadmap
-- [] Multilingual and multidialect
-- [] Emotional and style control
+- [ ] Multilingual and multidialect
+- [ ] Emotional and style control
 
   
 ## Commercial Support
