@@ -8,7 +8,7 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 - **Few-Shot Voice Cloning** --- High similarity voice cloning can be completed with a small amount of reference audio, featuring natural prosody, high voice restoration.
 - **Low Computational Cost & On-Device Friendly** --- Low memory usage and low inference overhead, which can run smoothly on CPU, ordinary GPU, and embedded edge devices.
 - **Ready to Use** --- Provides simple inference scripts and fast calling interfaces, enabling synthesis and cloning with one line of code, facilitating secondary development and business integration.
-- **Supports quick correction** --- For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors and improve the reliability of speech synthesis.
+- **Supports quick correction** --- For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors.
 
 ## Model Details
 - The model follows the Token-LM model paradim.
@@ -17,14 +17,30 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 - Currently the released version runs at **50Hz** token rate and the **12.5hz** version models will be released soon.
   
 ## Demo
-[英文 女声.mp3](https://github.com/user-attachments/files/27511331/female_en_139.mp3)
 
-[中文 女声-1.mp3](https://github.com/user-attachments/files/27511327/female_zh_95.mp3)
+### English Female Voice
+<audio controls>
+  <source src="https://github.com/user-attachments/files/27511331/female_en_139.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
 
-[英文 男声.mp3](https://github.com/user-attachments/files/27511323/male_en_88.mp3)
+### Chinese Female Voice (Sample 1)
+<audio controls>
+  <source src="https://github.com/user-attachments/files/27511327/female_zh_95.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
 
-[中文 女声-2.mp3](https://github.com/user-attachments/files/27511322/female_zh_89.mp3)
+### English Male Voice
+<audio controls>
+  <source src="https://github.com/user-attachments/files/27511323/male_en_88.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
 
+### Chinese Female Voice (Sample 2)
+<audio controls>
+  <source src="https://github.com/user-attachments/files/27511322/female_zh_89.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio>
 
 
 ## Quick Start
