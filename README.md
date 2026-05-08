@@ -17,7 +17,14 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 - Currently the released version runs at **50Hz** token rate and the **12.5hz** version models will be released soon.
   
 ## Demo
-[female_en_139.mp3](https://github.com/HojoAI/Hojo-TTS-Light/assets/audio/female_en_139.mp3)
+[英文 女声.mp3](https://github.com/user-attachments/files/27511331/female_en_139.mp3)
+
+[中文 女声-1.mp3](https://github.com/user-attachments/files/27511327/female_zh_95.mp3)
+
+[英文 男声.mp3](https://github.com/user-attachments/files/27511323/male_en_88.mp3)
+
+[中文 女声-2.mp3](https://github.com/user-attachments/files/27511322/female_zh_89.mp3)
+
 
 
 ## Quick Start
