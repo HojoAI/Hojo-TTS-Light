@@ -83,6 +83,7 @@ python infer_onnx.py \
 ```
 
 ## Roadmap
+- [x] release Hojo-TTS-Light v1 ONNX model and inference engine
 - [ ] support streaming mode synthesis
 - [ ] support emotion and style control
 - [ ] support multi-lingual and multi-dialect
