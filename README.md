@@ -17,7 +17,7 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 - Currently the released version runs at **50Hz** token rate and the **12.5hz** version models will be released soon.
   
 ## Demo
-**TBD**
+<audio src="./assets/zh1.wav" controls></audio>
 ## Quick Start
 **TBD**
 ## Credits
