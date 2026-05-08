@@ -1,4 +1,4 @@
-![License](https://img.shields.io/badge/apache-2.0-license)
+
 ![github license](https://img.shields.io/github/license/HojoAI/Hojo-TTS-Light)
 
 
