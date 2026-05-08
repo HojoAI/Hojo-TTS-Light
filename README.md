@@ -21,30 +21,20 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 - Currently the released version runs at **50Hz** token rate and the **12.5hz** version models will be released soon.
   
 ## Demo
+**Code-switching Male Voice**
+[mix_13.mp3](https://github.com/user-attachments/files/27513409/mix_13.mp3)
 
-### English Female Voice
-<audio controls>
-  <source src="https://github.com/user-attachments/files/27511331/female_en_139.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+**English Female Voice**
+[female_en_139.mp3](https://github.com/user-attachments/files/27513300/female_en_139.mp3)
 
-### Chinese Female Voice (Sample 1)
-<audio controls>
-  <source src="https://github.com/user-attachments/files/27511327/female_zh_95.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+**Chinese Female Voice (Sample 1)**
+[female_zh_89.mp3](https://github.com/user-attachments/files/27513312/female_zh_89.mp3)
 
-### English Male Voice
-<audio controls>
-  <source src="https://github.com/user-attachments/files/27511323/male_en_88.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+**English Male Voice**
+[male_en_88.mp3](https://github.com/user-attachments/files/27513325/male_en_88.mp3)
 
-### Chinese Female Voice (Sample 2)
-<audio controls>
-  <source src="https://github.com/user-attachments/files/27511322/female_zh_89.mp3" type="audio/mpeg">
-  Your browser does not support the audio element.
-</audio>
+**Chinese Female Voice (Sample 2)**
+[female_zh_95.mp3](https://github.com/user-attachments/files/27513335/female_zh_95.mp3)
 
 ## Environment Configuration \&amp; Inference Guide for Hojo\-TTS
 
