@@ -7,12 +7,12 @@
 **With only 0.08B parameters**, that is, the parametere size of backbone LM is only **80M**, Hojo-TTS-Light can generate good enough quality speech (average **DNSMOS>4.0** on Seed-TTS eval dataset).
 Currently, Hojo-TTS-Light supports both Chinese and English, and also supports voice cloning with a few seconds of audio.
 ## Features
-- **Ultra-Lightweight Core Model** --- The core language model is only 80M parameters, with extremely small parameter size under the same sound quality and very low deployment threshold.
-- **Native Bilingual Integration** --- A single model supports smooth synthesis and cross-lingual voice cloning for both Chinese and English, no branch switching required.
-- **Voice Cloning** --- High similarity voice cloning can be completed with a small amount of reference audio, featuring natural prosody, high voice restoration.
-- **Low Computational Cost & On-Device Friendly** --- Low memory usage and low inference overhead, which can run smoothly on CPU, ordinary GPU, and embedded edge devices.
-- **Ready to Use** --- Provides simple inference scripts and fast calling interfaces, enabling synthesis and cloning with one line of code, facilitating secondary development and business integration.
-- **Supports quick correction** --- For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors.
+- **Ultra-Lightweight Core Model** --- _The core language model is only 80M parameters, with extremely small parameter size under the same sound quality and very low deployment threshold._
+- **Native Bilingual Integration** --- _A single model supports smooth synthesis and cross-lingual voice cloning for both Chinese and English, no branch switching required._
+- **Voice Cloning** --- _High similarity voice cloning can be completed with a small amount of reference audio, featuring natural prosody, high voice restoration._
+- **Low Computational Cost & On-Device Friendly** --- _Low memory usage and low inference overhead, which can run smoothly on CPU, ordinary GPU, and embedded edge devices._
+- **Ready to Use** --- _Provides simple inference scripts and fast calling interfaces, enabling synthesis and cloning with one line of code, facilitating secondary development and business integration._
+- **Supports quick correction** --- _For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors._
 
 ## Model Details
 - The model follows the Token-LM model paradim.
