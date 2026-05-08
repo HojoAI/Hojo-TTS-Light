@@ -45,39 +45,39 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
   Your browser does not support the audio element.
 </audio>
 
-
-## Quick Start
-环境配置
-
+Environment Configuration & Inference Guide for Hojo-TTS-Light
+1. Environment Setup
+# Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
+
+# Activate the conda environment
 conda activate hojo-tts
 
+# Install inference dependencies
 pip install -r requirements.infer.txt
-
-从 HuggingFace 下载 ONNX 模型
-先安装下载工具：
+2. Download ONNX Models from HuggingFace
+2.1 Install the Download Tool
 pip install -U "huggingface_hub[cli]"
-
-下载（将 <HF_MODEL_REPO_URL> 替换为你的 HuggingFace 模型地址）：
+2.2 Download the Models
+Replace <HF_MODEL_REPO_URL> with your actual HuggingFace model repository URL:
 huggingface-cli download <HF_MODEL_REPO_URL> \
   --local-dir ./onnx \
   --local-dir-use-symlinks False
-
-
-下载后请确保 onnx/ 目录下有以下文件：
-
-onnx/Hojo-TTS-Light-llm.onnx
-onnx/Hojo-TTS-Light-encoder.onnx
-onnx/Hojo-TTS-Light-decoder.onnx
-
-推理运行：
+2.3 Verify Downloaded Files
+After downloading, ensure the following files exist in the onnx/ directory:
+- onnx/Hojo-TTS-Light-llm.onnx
+- onnx/Hojo-TTS-Light-encoder.onnx
+- onnx/Hojo-TTS-Light-decoder.onnx
+3. Run Inference
 python infer_onnx.py \
   --onnx_dir ./onnx \
   --tokenizer_path ./tokenizer \
   --prompt-speech ./assets/zh1.wav \
-  --prompt-text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
-  --text "今天天气怎么样。" \
+  --prompt-text "Nowadays, food delivery is really full of pitfalls. Why don't we switch to a slightly more expensive one? Maybe the quality is better." \
+  --text "How is the weather today." \
   --output-wav ./assets/out.wav
+
+
   
 ## Credits
 - [X-Codec-2.0](https://github.com/zhenye234/X-Codec-2.0)
