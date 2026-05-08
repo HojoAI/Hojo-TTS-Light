@@ -86,7 +86,9 @@ python infer_onnx.py \
 
   
 ## Commercial Support
+We offer commercial support for teams integrating Hojo TTS into their products. This includes integration assistance, custom voice development, and enterprise licensing.
 
+Contact us or email developer@hojoai.com to discuss your requirements.
   
 ## Credits
 - [X-Codec-2.0](https://github.com/zhenye234/X-Codec-2.0)
