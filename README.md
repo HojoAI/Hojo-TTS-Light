@@ -5,11 +5,11 @@
 ## Hojo-TTS-Light
 **Hojo-TTS-Light** is an open-source lightweight Text-To-Speech model by HojoAI team.
 **With only 0.08B parameters**, that is, the parametere size of backbone LM is only **80M**, Hojo-TTS-Light can generate good enough quality speech (average **DNSMOS>4.0** on Seed-TTS eval dataset).
-Currently, Hojo-TTS-Light supports both Chinese and English, and also supports voice cloning with as little as a few seconds of audio.
+Currently, Hojo-TTS-Light supports both Chinese and English, and also supports voice cloning with a few seconds of audio.
 ## Features
 - **Ultra-Lightweight Core Model** --- The core language model is only 80M parameters, with extremely small parameter size under the same sound quality and very low deployment threshold.
 - **Native Bilingual Integration** --- A single model supports smooth synthesis and cross-lingual voice cloning for both Chinese and English, no branch switching required.
-- **Few-Shot Voice Cloning** --- High similarity voice cloning can be completed with a small amount of reference audio, featuring natural prosody, high voice restoration.
+- **Voice Cloning** --- High similarity voice cloning can be completed with a small amount of reference audio, featuring natural prosody, high voice restoration.
 - **Low Computational Cost & On-Device Friendly** --- Low memory usage and low inference overhead, which can run smoothly on CPU, ordinary GPU, and embedded edge devices.
 - **Ready to Use** --- Provides simple inference scripts and fast calling interfaces, enabling synthesis and cloning with one line of code, facilitating secondary development and business integration.
 - **Supports quick correction** --- For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors.
