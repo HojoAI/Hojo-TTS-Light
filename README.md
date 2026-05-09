@@ -22,7 +22,8 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
   
 ## Demo
 **Code-switching Male Voice**
-[mixed.mp3](https://github.com/user-attachments/files/27513409/mix_13.mp3)
+
+https://github.com/user-attachments/assets/ad98ad4e-180b-48a7-9c0d-9745eaf869b4
 
 
 **English Female Voice**
