@@ -51,7 +51,7 @@ https://github.com/user-attachments/assets/8501450e-4942-4eea-a8d9-4923d42a7bba
 
 
 
-## Environment Configuration ; Inference Guide for Hojo\-TTS
+## Environment Configuration & Inference Guide
 
 ###  Environment Setup
 
