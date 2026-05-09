@@ -37,11 +37,11 @@ https://github.com/user-attachments/assets/aa9843e9-5c37-4a80-ab37-eafa61edf7ef
 
 **English Male Voice**
 
-https://github.com/user-attachments/assets/46e510dc-d4b6-4076-af11-849ee83884e5
+https://github.com/user-attachments/assets/46e510dc-d4b6-4076-af11-849ee83884e5 
 
 **Chinese Female Voice (Sample 2)**
 
-https://github.com/user-attachments/assets/8501450e-4942-4eea-a8d9-4923d42a7bba
+![sample video](https://github.com/user-attachments/assets/8501450e-4942-4eea-a8d9-4923d42a7bba){width=100}
 
 
 
