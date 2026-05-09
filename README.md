@@ -1,4 +1,8 @@
 
+
+https://github.com/user-attachments/assets/05c64ca1-a721-420b-8647-6a56af4aef18
+
+
 [![github license](https://img.shields.io/github/license/HojoAI/Hojo-TTS-Light)]
 
 
@@ -35,6 +39,14 @@ Currently, Hojo-TTS-Light supports both Chinese and English, and also supports v
 
 **Chinese Female Voice (Sample 2)**
 [female_zh_2.mp3](https://github.com/user-attachments/files/27513335/female_zh_95.mp3)
+
+
+
+https://github.com/user-attachments/assets/6ad19560-b774-4dc4-be7e-4038b866f219
+
+
+
+
 
 ## Environment Configuration ; Inference Guide for Hojo\-TTS
 
