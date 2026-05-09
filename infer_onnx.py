@@ -151,19 +151,69 @@ def build_prompt(tokenizer, ref_text: str, target_text: str, prompt_audio_tokens
     return prompt, target_speech_end_token
 
 
+def _sample_next_token(
+    logits: np.ndarray,
+    cur_ids: np.ndarray,
+    temperature: float,
+    top_p: float,
+    top_k: int,
+    repetition_penalty: float,
+) -> int:
+    """Match HuggingFace-style sampling + repetition_penalty (see infer_24k model.generate)."""
+    logits = logits.astype(np.float64, copy=True)
+    if repetition_penalty != 1.0:
+        for tid in np.unique(cur_ids):
+            if logits[tid] < 0:
+                logits[tid] *= repetition_penalty
+            else:
+                logits[tid] /= repetition_penalty
+    if temperature <= 0.0:
+        return int(np.argmax(logits))
+    logits = logits / temperature
+    if top_k > 0 and top_k < logits.shape[-1]:
+        keep = np.argpartition(logits, -top_k)[-top_k:]
+        masked = np.full_like(logits, -np.inf)
+        masked[keep] = logits[keep]
+        logits = masked
+    probs = np.exp(logits - np.max(logits))
+    probs = probs / np.sum(probs)
+    if 0.0 < top_p < 1.0:
+        sorted_idx = np.argsort(probs)[::-1]
+        sorted_probs = probs[sorted_idx]
+        cumulative = np.cumsum(sorted_probs)
+        keep_mask = cumulative <= top_p
+        keep_mask[0] = True
+        keep_idx = sorted_idx[keep_mask]
+        filtered = np.zeros_like(probs)
+        filtered[keep_idx] = probs[keep_idx]
+        probs = filtered / np.sum(filtered)
+    return int(np.random.choice(np.arange(probs.shape[-1]), p=probs))
+
+
 def onnx_ar_generate_new_ids(
     sess_llm: ort.InferenceSession,
     input_ids: torch.Tensor,
     eos_token_id: int,
     max_new_tokens: int,
     min_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    top_k: int,
+    repetition_penalty: float,
     device: torch.device,
 ) -> torch.Tensor:
     cur = input_ids[0].detach().cpu().numpy().astype(np.int64)
     generated = []
     for step in range(max_new_tokens):
         logits = sess_llm.run(None, {"input_ids": cur.reshape(1, -1)})[0]
-        next_id = int(np.argmax(logits[0, -1, :]))
+        next_id = _sample_next_token(
+            logits=logits[0, -1, :],
+            cur_ids=cur,
+            temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
+            repetition_penalty=repetition_penalty,
+        )
         generated.append(next_id)
         cur = np.concatenate([cur, np.array([next_id], dtype=np.int64)], axis=0)
         if next_id == eos_token_id and step + 1 >= min_new_tokens:
@@ -250,6 +300,20 @@ def parse_args():
     )
     parser.add_argument("--max_new_tokens", type=int, default=2048)
     parser.add_argument("--min_new_tokens", type=int, default=10)
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.8,
+        help=">0 enables sampling (like infer_24k do_sample); 0 or negative uses greedy argmax.",
+    )
+    parser.add_argument("--top_p", type=float, default=0.95)
+    parser.add_argument(
+        "--top_k",
+        type=int,
+        default=0,
+        help="If >0, restrict sampling to top-k logits before top-p (HF-style). 0 disables.",
+    )
+    parser.add_argument("--repetition_penalty", type=float, default=1.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"])
     parser.add_argument("--llm_provider", type=str, default="auto", choices=["auto", "cpu", "cuda"])
@@ -363,6 +427,10 @@ def main():
         eos_token_id=speech_end_id,
         max_new_tokens=args.max_new_tokens,
         min_new_tokens=args.min_new_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        top_k=args.top_k,
+        repetition_penalty=args.repetition_penalty,
         device=device,
     )
     generated_audio_codes = _extract_audio_codes_from_generated_tail(
