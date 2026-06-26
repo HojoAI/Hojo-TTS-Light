@@ -3,14 +3,27 @@
 
 
 ## Hojo-TTS-Light
-**Hojo-TTS-Light** is an open-source lightweight Text-To-Speech model by HojoAI team.</font>
+**Hojo-TTS-Light** is an open-source lightweight Text-To-Speech model by HojoAI team.
+
 There are currently two types of model parameter sizes, **Hojo-TTS-Light-80M** and **Hojo-TTS-Light-40M**.
 Both follow the **token-LM** framework and both can generate good enough quality speech (average **DNSMOS>4.0** on Seed-TTS eval dataset).
 Currently, Hojo-TTS-Light supports both Chinese and English. 
 **Hojo-TTS-Light-40M** supports 15 build-in voices，2 for Chinese and 13 for English.
-**Hojo-TTS-Light-80M** also supports voice cloning with a few seconds of audio.</font> 
+**Hojo-TTS-Light-80M** also supports voice cloning with a few seconds of audio.
 We provided optimized ONNX model packaging file, so that users can perform speech synthesis efficiently on CPU without requiring a GPU.
 
+## Features
+- **Ultra-Lightweight Core Model** --- The core language model is only 80M and 40M parameters, with extremely small parameter size under the same sound quality and very low deployment threshold.
+- **Native Bilingual Integration** --- A single model supports smooth synthesis for both Chinese and English, no branch switching required.
+- **Low Computational Cost & On-Device Friendly** --- Low memory usage and low inference overhead, which can run smoothly on CPU, ordinary GPU, and embedded edge devices.
+- **Ready to Use** --- Provides simple inference scripts and fast calling interfaces, enabling synthesis and cloning with one line of code, facilitating secondary development and business integration.
+- **Supports quick correction** --- For the problem of easily mispronouncing Chinese and English polyphonic characters and proper nouns, users can directly use Pinyin to correct pronunciation errors and improve the reliability of speech synthesis.
+
+## Model Details
+- The model follows the Token-LM model paradim.
+- The speech tokenizer is composed of a **18M** encoder and a **30M** decoder.
+- We use FSQ which inherently enables higher codebook utilization, the codebook size is 8000 for audio and totally <20000.
+- Currently the released version runs at **50Hz** token rate and the **12.5hz** version models will be released soon.
 
 ## Roadmap
 - [x] release Hojo-TTS-Light v1 Hojo-TTS-Light-80M ONNX model and inference engine
