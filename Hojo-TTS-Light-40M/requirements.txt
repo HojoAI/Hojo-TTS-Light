@@ -1,0 +1,14 @@
+# TTS ONNX inference (release/)
+# Python >=3.10,<3.13  (tested on 3.11)
+# Install onnxruntime (CPU) OR onnxruntime-gpu (CUDA), not both.
+
+numpy>=1.24
+soundfile>=0.12
+tokenizers>=0.15
+
+# CPU:
+onnxruntime>=1.17
+# GPU (replace line above):
+# onnxruntime-gpu>=1.17
+
+huggingface_hub>=0.23

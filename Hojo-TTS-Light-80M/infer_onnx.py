@@ -1,15 +1,32 @@
 #!/usr/bin/env python3
+"""ONNX inference: local Hojo-TTS-Light-llm.onnx (KV-cache) + Hojo codec.
+
+Expected layout::
+
+    onnx/
+        Hojo-TTS-Light-llm.onnx
+        config.json
+        generation_config.json    # optional
+        tokenizer.json
+        tokenizer_config.json
+        Hojo-TTS-Light-encoder.onnx
+        Hojo-TTS-Light-decoder.onnx
+"""
+
+from __future__ import annotations
+
 import argparse
-import glob
 import os
+import re
+import time
 
 import numpy as np
 import onnxruntime as ort
 import soundfile as sf
 import torch
 import torchaudio
-from transformers import AutoTokenizer
-
+import transformers
+from optimum.onnxruntime import ORTModelForCausalLM
 
 SPEECH_TOKEN_PATTERN = "[{}]"
 SPEECH_START_TOKEN = "[speech_start]"
@@ -24,8 +41,32 @@ TARGET_SPEECH_START_TOKEN = "[target_speech_start]"
 TARGET_SPEECH_END_TOKEN = "[target_speech_end]"
 CODEC_SAMPLE_RATE = 16000
 
+_HOJO_ROOT = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_ONNX_DIR = os.path.join(_HOJO_ROOT, "onnx")
+_LLM_ONNX_NAME = "Hojo-TTS-Light-llm.onnx"
+_ONNX_REQUIRED = (
+    "config.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "Hojo-TTS-Light-encoder.onnx",
+    "Hojo-TTS-Light-decoder.onnx",
+)
+_AUDIO_TOKEN_REGEX = re.compile(r"^\[(\d+)\]$")
 
-def _resolve_generation_tokens(tokenizer):
+
+def _validate_onnx_dir(onnx_dir: str) -> None:
+    """Ensure onnx/ contains LM, tokenizer, and codec assets."""
+    llm_onnx = os.path.join(onnx_dir, _LLM_ONNX_NAME)
+    if not os.path.isfile(llm_onnx):
+        raise FileNotFoundError(f"missing LM ONNX: {llm_onnx}")
+
+    for name in _ONNX_REQUIRED:
+        path = os.path.join(onnx_dir, name)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"missing onnx resource: {path}")
+
+
+def _resolve_generation_tokens(tokenizer: transformers.PreTrainedTokenizerBase):
     ref_text_start = REF_TEXT_START_TOKEN
     ref_text_end = REF_TEXT_END_TOKEN
     target_text_start = TARGET_TEXT_START_TOKEN
@@ -42,64 +83,41 @@ def _resolve_generation_tokens(tokenizer):
     )
 
 
-def _build_audio_token_id_to_code_table(tokenizer, device: torch.device) -> dict[int, torch.Tensor]:
-    id_to_code: dict[int, torch.Tensor] = {}
-    token_zero = SPEECH_TOKEN_PATTERN.format(0)
-    token_one = SPEECH_TOKEN_PATTERN.format(1)
-    left = 0
-    while left < min(len(token_zero), len(token_one)) and token_zero[left] == token_one[left]:
-        left += 1
-    right = 0
-    while (
-        right < (len(token_zero) - left)
-        and right < (len(token_one) - left)
-        and token_zero[len(token_zero) - 1 - right] == token_one[len(token_one) - 1 - right]
-    ):
-        right += 1
-    prefix = token_zero[:left]
-    suffix = token_zero[len(token_zero) - right :] if right > 0 else ""
-
-    for tid in range(len(tokenizer)):
+def _build_audio_token_id_to_code_table(
+    tokenizer: transformers.PreTrainedTokenizerBase,
+    device: torch.device,
+) -> torch.Tensor:
+    vocab_size = len(tokenizer)
+    table_cpu = torch.full((vocab_size,), -1, dtype=torch.long)
+    for tid in range(vocab_size):
         token_str = tokenizer.decode([tid], skip_special_tokens=False).strip()
-        if not token_str.startswith(prefix):
-            continue
-        if suffix and (not token_str.endswith(suffix)):
-            continue
-        middle = token_str[len(prefix) : len(token_str) - len(suffix) if suffix else None]
-        if not middle:
-            continue
-        if middle[0] == "-":
-            if not middle[1:].isdigit():
-                continue
-        elif not middle.isdigit():
-            continue
-        id_to_code[tid] = torch.tensor(int(middle), dtype=torch.long, device=device)
-    return id_to_code
+        match = _AUDIO_TOKEN_REGEX.match(token_str)
+        if match is not None:
+            table_cpu[tid] = int(match.group(1))
+    return table_cpu.to(device=device)
 
 
 def _extract_audio_codes_from_generated_tail(
-    generated_ids: torch.Tensor,
+    generated_tail_ids: torch.Tensor,
     speech_end_id: int,
-    id_to_code: dict[int, torch.Tensor],
+    id_to_code: torch.Tensor,
 ) -> torch.Tensor:
-    if generated_ids.dim() != 1:
-        generated_ids = generated_ids.view(-1)
-    eos_pos = (generated_ids == speech_end_id).nonzero(as_tuple=False)
-    if eos_pos.numel() > 0:
-        generated_ids = generated_ids[: int(eos_pos[0].item())]
-
-    codes = [id_to_code[int(tid.item())] for tid in generated_ids if int(tid.item()) in id_to_code]
-    if not codes:
-        return torch.empty((0,), dtype=torch.long, device=generated_ids.device)
-    return torch.stack(codes, dim=0).to(dtype=torch.long)
+    if generated_tail_ids.numel() == 0:
+        return generated_tail_ids.new_empty((0,))
+    ends = (generated_tail_ids == speech_end_id).nonzero(as_tuple=False)
+    seq = generated_tail_ids[: int(ends[0].item())] if ends.numel() > 0 else generated_tail_ids
+    if seq.numel() == 0:
+        return generated_tail_ids.new_empty((0,))
+    codes = id_to_code[seq]
+    return codes[codes >= 0]
 
 
 def _onnx_input_type_to_numpy_dtype(type_str: str) -> np.dtype:
-    if type_str != "tensor(float16)":
-        raise ValueError(
-            f"only fp16 encoder input is supported, but got ONNX input type: {type_str}"
-        )
-    return np.float16
+    if "float16" in type_str:
+        return np.float16
+    if "float" in type_str:
+        return np.float32
+    raise ValueError(f"Unsupported encoder input type: {type_str}")
 
 
 def _load_wav(path: str, target_sample_rate: int) -> tuple[torch.Tensor, int]:
@@ -151,76 +169,6 @@ def build_prompt(tokenizer, ref_text: str, target_text: str, prompt_audio_tokens
     return prompt, target_speech_end_token
 
 
-def _sample_next_token(
-    logits: np.ndarray,
-    cur_ids: np.ndarray,
-    temperature: float,
-    top_p: float,
-    top_k: int,
-    repetition_penalty: float,
-) -> int:
-    """Match HuggingFace-style sampling + repetition_penalty (see infer_24k model.generate)."""
-    logits = logits.astype(np.float64, copy=True)
-    if repetition_penalty != 1.0:
-        for tid in np.unique(cur_ids):
-            if logits[tid] < 0:
-                logits[tid] *= repetition_penalty
-            else:
-                logits[tid] /= repetition_penalty
-    if temperature <= 0.0:
-        return int(np.argmax(logits))
-    logits = logits / temperature
-    if top_k > 0 and top_k < logits.shape[-1]:
-        keep = np.argpartition(logits, -top_k)[-top_k:]
-        masked = np.full_like(logits, -np.inf)
-        masked[keep] = logits[keep]
-        logits = masked
-    probs = np.exp(logits - np.max(logits))
-    probs = probs / np.sum(probs)
-    if 0.0 < top_p < 1.0:
-        sorted_idx = np.argsort(probs)[::-1]
-        sorted_probs = probs[sorted_idx]
-        cumulative = np.cumsum(sorted_probs)
-        keep_mask = cumulative <= top_p
-        keep_mask[0] = True
-        keep_idx = sorted_idx[keep_mask]
-        filtered = np.zeros_like(probs)
-        filtered[keep_idx] = probs[keep_idx]
-        probs = filtered / np.sum(filtered)
-    return int(np.random.choice(np.arange(probs.shape[-1]), p=probs))
-
-
-def onnx_ar_generate_new_ids(
-    sess_llm: ort.InferenceSession,
-    input_ids: torch.Tensor,
-    eos_token_id: int,
-    max_new_tokens: int,
-    min_new_tokens: int,
-    temperature: float,
-    top_p: float,
-    top_k: int,
-    repetition_penalty: float,
-    device: torch.device,
-) -> torch.Tensor:
-    cur = input_ids[0].detach().cpu().numpy().astype(np.int64)
-    generated = []
-    for step in range(max_new_tokens):
-        logits = sess_llm.run(None, {"input_ids": cur.reshape(1, -1)})[0]
-        next_id = _sample_next_token(
-            logits=logits[0, -1, :],
-            cur_ids=cur,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            repetition_penalty=repetition_penalty,
-        )
-        generated.append(next_id)
-        cur = np.concatenate([cur, np.array([next_id], dtype=np.int64)], axis=0)
-        if next_id == eos_token_id and step + 1 >= min_new_tokens:
-            break
-    return torch.tensor(generated, dtype=torch.long, device=device)
-
-
 def decode_codes_with_onnx_decoder(
     sess_dec: ort.InferenceSession,
     codes: torch.Tensor,
@@ -236,7 +184,7 @@ def decode_codes_with_onnx_decoder(
     decoder_uses_codes = ("int64" in dec_input_type) or (dec_input_name == "vq_codes")
     if not decoder_uses_codes:
         raise RuntimeError(
-            "This script only supports new ONNX exports where decoder input is int64 vq_codes."
+            "This script only supports ONNX exports where decoder input is int64 vq_codes."
         )
 
     if fixed_chunk_tokens is None:
@@ -283,12 +231,14 @@ def decode_codes_with_onnx_decoder(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Single-sample ONNX inference (prompt speech + text).")
-    parser.add_argument("--onnx_dir", type=str, required=True)
+    parser = argparse.ArgumentParser(
+        description="ONNX TTS: Hojo-TTS-Light-llm.onnx (KV-cache) + Hojo codec ONNX."
+    )
     parser.add_argument(
-        "--tokenizer_path",
+        "--onnx_dir",
         type=str,
-        default="/speech/users/tts_common/tts_pingce/tts_envs/tts_wfp_v1/model_for_test_pinyin",
+        default=DEFAULT_ONNX_DIR,
+        help="ONNX directory (LM + tokenizer + codec encoder/decoder).",
     )
     parser.add_argument("--prompt-speech", type=str, required=True, help="Reference speech wav path.")
     parser.add_argument("--text", type=str, required=True, help="Target text to synthesize.")
@@ -296,7 +246,7 @@ def parse_args():
     parser.add_argument(
         "--output-wav",
         type=str,
-        default="/speech/users/tts_common/tts_pingce/tts_envs/tts_wfp_v1/test_result/onnx_single.wav",
+        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "out.wav"),
     )
     parser.add_argument("--max_new_tokens", type=int, default=2048)
     parser.add_argument("--min_new_tokens", type=int, default=10)
@@ -304,24 +254,39 @@ def parse_args():
         "--temperature",
         type=float,
         default=0.8,
-        help=">0 enables sampling (like infer_24k do_sample); 0 or negative uses greedy argmax.",
+        help=">0 enables sampling; 0 or negative uses greedy argmax.",
     )
     parser.add_argument("--top_p", type=float, default=0.95)
-    parser.add_argument(
-        "--top_k",
-        type=int,
-        default=0,
-        help="If >0, restrict sampling to top-k logits before top-p (HF-style). 0 disables.",
-    )
     parser.add_argument("--repetition_penalty", type=float, default=1.1)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", type=str, default="cuda", choices=["cuda", "cpu"])
-    parser.add_argument("--llm_provider", type=str, default="auto", choices=["auto", "cpu", "cuda"])
-    parser.add_argument("--codec_provider", type=str, default="auto", choices=["auto", "cpu", "cuda"])
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default="CUDAExecutionProvider",
+        help="ONNX Runtime provider for LM (CUDAExecutionProvider or CPUExecutionProvider).",
+    )
+    parser.add_argument(
+        "--codec_provider",
+        type=str,
+        default="",
+        help="ORT provider for codec (default: same as --provider).",
+    )
+    parser.add_argument(
+        "--use_cache",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable KV-cache decoding for ORTModelForCausalLM (default: True).",
+    )
+    parser.add_argument(
+        "--use_io_binding",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="ORT IO binding for LM (default: on for CUDA, off for CPU).",
+    )
     parser.add_argument(
         "--strict_cuda",
         action="store_true",
-        help="When --device cuda, use CUDAExecutionProvider only (no CPU fallback).",
+        help="When using CUDA, do not fall back to CPUExecutionProvider.",
     )
     return parser.parse_args()
 
@@ -332,55 +297,67 @@ def main():
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
 
-    llm_onnx = os.path.join(args.onnx_dir, "Hojo-TTS-Light-llm.onnx")
-    enc_onnx = os.path.join(args.onnx_dir, "Hojo-TTS-Light-encoder.onnx")
-    dec_onnx = os.path.join(args.onnx_dir, "Hojo-TTS-Light-decoder.onnx")
-    for p in (llm_onnx, enc_onnx, dec_onnx):
-        if not os.path.isfile(p):
-            raise FileNotFoundError(f"onnx file missing: {p}")
+    onnx_dir = os.path.abspath(args.onnx_dir)
+    llm_onnx = os.path.join(onnx_dir, _LLM_ONNX_NAME)
+    enc_onnx = os.path.join(onnx_dir, "Hojo-TTS-Light-encoder.onnx")
+    dec_onnx = os.path.join(onnx_dir, "Hojo-TTS-Light-decoder.onnx")
 
-    if args.device == "cuda":
-        if not torch.cuda.is_available():
-            raise RuntimeError("--device cuda was set but torch.cuda is unavailable.")
-        available = ort.get_available_providers()
-        if "CUDAExecutionProvider" not in available:
-            raise RuntimeError(
-                "--device cuda was set but CUDAExecutionProvider is unavailable. "
-                f"available providers: {available}"
-            )
-        providers = ["CUDAExecutionProvider"] if args.strict_cuda else [
-            "CUDAExecutionProvider",
-            "CPUExecutionProvider",
-        ]
-        device = torch.device("cuda")
+    _validate_onnx_dir(onnx_dir)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    available = ort.get_available_providers()
+    if args.provider == "CUDAExecutionProvider":
+        if device.type != "cuda":
+            if args.strict_cuda:
+                raise RuntimeError("--provider CUDAExecutionProvider but torch.cuda is unavailable.")
+            print("[WARN] CUDA unavailable; falling back to CPUExecutionProvider for LM.")
+            lm_providers = ["CPUExecutionProvider"]
+        elif "CUDAExecutionProvider" not in available:
+            if args.strict_cuda:
+                raise RuntimeError(f"CUDAExecutionProvider unavailable: {available}")
+            print("[WARN] CUDAExecutionProvider unavailable; using CPUExecutionProvider for LM.")
+            lm_providers = ["CPUExecutionProvider"]
+        else:
+            lm_providers = ["CUDAExecutionProvider"] if args.strict_cuda else [
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider",
+            ]
     else:
-        providers = ["CPUExecutionProvider"]
-        device = torch.device("cpu")
+        lm_providers = ["CPUExecutionProvider"]
+
+    codec_provider = args.codec_provider or lm_providers[0]
+    codec_providers = [codec_provider]
+    if codec_provider == "CUDAExecutionProvider" and not args.strict_cuda:
+        codec_providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+    use_io_binding = args.use_io_binding
+    if use_io_binding is None:
+        use_io_binding = lm_providers[0] == "CUDAExecutionProvider"
 
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     if device.type == "cuda":
         torch.cuda.manual_seed_all(args.seed)
 
-    if not os.path.isdir(args.tokenizer_path):
-        raise FileNotFoundError(f"tokenizer_path is not a directory: {args.tokenizer_path}")
-    for name in ("tokenizer.json", "tokenizer_config.json"):
-        p = os.path.join(args.tokenizer_path, name)
-        if not os.path.isfile(p):
-            raise FileNotFoundError(f"missing tokenizer resource file: {p}")
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
+    llm_file_name = _LLM_ONNX_NAME
+    print(f"[INFO] Loading ORT LM from: {llm_onnx}")
+    print(f"[INFO] Tokenizer: {onnx_dir}")
+    print(
+        f"[INFO] ORT LM options: provider={lm_providers[0]} "
+        f"use_cache={args.use_cache} use_io_binding={use_io_binding}"
+    )
+    ort_model = ORTModelForCausalLM.from_pretrained(
+        onnx_dir,
+        file_name=llm_file_name,
+        use_cache=args.use_cache,
+        use_io_binding=use_io_binding,
+        provider=lm_providers[0],
+        providers=lm_providers,
+    )
+    tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained(onnx_dir)
 
-    def _providers_for(kind: str) -> list[str]:
-        choice = getattr(args, f"{kind}_provider")
-        if choice == "auto":
-            return providers
-        if choice == "cpu":
-            return ["CPUExecutionProvider"]
-        return ["CUDAExecutionProvider", "CPUExecutionProvider"]
-
-    llm_providers = _providers_for("llm")
-    codec_providers = _providers_for("codec")
-    sess_llm = ort.InferenceSession(llm_onnx, providers=llm_providers)
+    print(f"[INFO] Loading codec encoder={enc_onnx}")
+    print(f"[INFO] Loading codec decoder={dec_onnx} provider={codec_providers[0]}")
     sess_enc = ort.InferenceSession(enc_onnx, providers=codec_providers)
     sess_dec = ort.InferenceSession(dec_onnx, providers=codec_providers)
     enc_np_dtype = _onnx_input_type_to_numpy_dtype(sess_enc.get_inputs()[0].type)
@@ -393,18 +370,16 @@ def main():
     fixed_chunk_tokens = dec_input_shape[2] if isinstance(dec_input_shape[2], int) else None
     dec_input = sess_dec.get_inputs()[0]
     if not (("int64" in dec_input.type) or (dec_input.name == "vq_codes")):
-        raise RuntimeError("decoder ONNX must accept int64 vq_codes; old exports are not supported.")
+        raise RuntimeError("decoder ONNX must accept int64 vq_codes.")
 
     wav, _ = _load_wav(args.prompt_speech, target_sample_rate=CODEC_SAMPLE_RATE)
-    prompt_wav = wav.to(device)
-    # Encoder expects [B, 1, T].
-    wav_np = prompt_wav.unsqueeze(0).unsqueeze(0).cpu().numpy().astype(enc_np_dtype, copy=False)
+    wav_np = wav.unsqueeze(0).unsqueeze(0).cpu().numpy().astype(enc_np_dtype, copy=False)
     wav_np = _fit_wav_to_onnx_encoder_time(wav_np, enc_fixed_time)
 
     enc_out = sess_enc.run(None, {"wav": wav_np})[0]
     encoder_outputs_codes = ("int64" in enc_output.type) or (enc_output.name == "vq_codes")
     if not encoder_outputs_codes:
-        raise RuntimeError("encoder ONNX must output int64 vq_codes; old exports are not supported.")
+        raise RuntimeError("encoder ONNX must output int64 vq_codes.")
     prompt_audio_codes = torch.from_numpy(enc_out).to(device=device, dtype=torch.long).view(-1)
 
     prompt_audio_tokens_str = "".join(
@@ -417,22 +392,35 @@ def main():
         target_text=args.text,
         prompt_audio_tokens_str=prompt_audio_tokens_str,
     )
-    input_ids = tokenizer(prompt, add_special_tokens=True, return_tensors="pt")["input_ids"].to(device)
+    input_ids = tokenizer(prompt, add_special_tokens=True, return_tensors="pt")["input_ids"]
     speech_end_id = tokenizer.convert_tokens_to_ids(target_speech_end_token)
+    if speech_end_id == tokenizer.unk_token_id:
+        raise ValueError(f"Tokenizer cannot find token: {target_speech_end_token}")
 
     id_to_code = _build_audio_token_id_to_code_table(tokenizer, device)
-    new_ids = onnx_ar_generate_new_ids(
-        sess_llm=sess_llm,
+
+    gen_input_len = int(input_ids.shape[1])
+    t_gen_start = time.perf_counter()
+    generated = ort_model.generate(
         input_ids=input_ids,
-        eos_token_id=speech_end_id,
         max_new_tokens=args.max_new_tokens,
         min_new_tokens=args.min_new_tokens,
+        eos_token_id=speech_end_id,
+        do_sample=args.temperature > 0.0,
         temperature=args.temperature,
         top_p=args.top_p,
-        top_k=args.top_k,
         repetition_penalty=args.repetition_penalty,
-        device=device,
     )
+    gen_elapsed_s = time.perf_counter() - t_gen_start
+    new_lm_tokens = max(int(generated.shape[1]) - gen_input_len, 0)
+    print(
+        f"[INFO] ORTModelForCausalLM.generate: input_tokens={gen_input_len} "
+        f"new_tokens={new_lm_tokens} elapsed_s={gen_elapsed_s:.4f} "
+        f"tok/s={new_lm_tokens / gen_elapsed_s if gen_elapsed_s > 0 else float('nan'):.2f}"
+    )
+
+    new_ids = generated[0, gen_input_len:].to(device=device, dtype=torch.long)
+    hit_eos = bool((new_ids == speech_end_id).any().item())
     generated_audio_codes = _extract_audio_codes_from_generated_tail(
         new_ids, speech_end_id=speech_end_id, id_to_code=id_to_code
     )
@@ -447,8 +435,19 @@ def main():
     )
     wav_out = wav_out.astype(np.float32, copy=False)
     sf.write(args.output_wav, wav_out, 24000)
+
+    wav_dur_s = len(wav_out) / 24000
+    print(
+        f"[INFO] Audio decode: codes={int(generated_audio_codes.numel())} "
+        f"duration_s={wav_dur_s:.2f} hit_eos={hit_eos}"
+    )
+    if not hit_eos and new_lm_tokens >= args.max_new_tokens:
+        print(
+            f"[WARN] Generation stopped at max_new_tokens={args.max_new_tokens} "
+            f"without {target_speech_end_token}; output may be truncated."
+        )
     print("[OK] output_wav:", args.output_wav)
-    print("[NOTE] llm_providers:", llm_providers)
+    print("[NOTE] lm_providers:", lm_providers)
     print("[NOTE] codec_providers:", codec_providers)
 
 

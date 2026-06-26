@@ -1,5 +1,7 @@
 numpy==1.24.4
 onnxruntime==1.23.2
+optimum==2.1.0
+optimum-onnx==0.1.0
 soundfile==0.13.1
 torch==2.8.0+cu128
 torchaudio==2.8.0+cu128
