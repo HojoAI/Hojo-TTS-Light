@@ -7,7 +7,9 @@
 
 There are currently two types of model parameter sizes, **Hojo-TTS-Light-80M** and **Hojo-TTS-Light-40M**.
 Both follow the **token-LM** framework and both can generate good enough quality speech (average **DNSMOS>4.0** on Seed-TTS eval dataset).
+
 Currently, Hojo-TTS-Light supports both Chinese and English. 
+
 **Hojo-TTS-Light-40M** supports 15 build-in voices，2 for Chinese and 13 for English.
 **Hojo-TTS-Light-80M** also supports voice cloning with a few seconds of audio.
 We provided optimized ONNX model packaging file, so that users can perform speech synthesis efficiently on CPU without requiring a GPU.
