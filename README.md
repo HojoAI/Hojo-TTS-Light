@@ -40,6 +40,16 @@ We provided optimized ONNX model packaging file, so that users can perform speec
 We offer commercial support for teams integrating Hojo TTS into their products. This includes integration assistance, custom voice development, and enterprise licensing.
 
 Contact us or email developer@hojoai.com to discuss your requirements.
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=HojoAI%2FHojo-TTS-Light&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=HojoAI/Hojo-TTS-Light&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=HojoAI/Hojo-TTS-Light&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=HojoAI/Hojo-TTS-Light&type=date&legend=top-left" />
+ </picture>
+</a>
   
 ## Credits
 - [X-Codec-2.0](https://github.com/zhenye234/X-Codec-2.0)
