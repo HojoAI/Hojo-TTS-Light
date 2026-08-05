@@ -13,17 +13,17 @@ import soundfile as sf
 from onnx_model import (
     CODEC_ONNX_NAME,
     DEFAULT_MODELS_DIR,
-    DEFAULT_VOICES,
+    FINE_LOCAL_ONNX_NAME,
     LM_ONNX_NAME,
     VOICES_NPZ_NAME,
     HojoTTSLightOnnx,
 )
 
 RELEASE_ROOT = Path(__file__).resolve().parent
-DEFAULT_EXAMPLES_DIR = RELEASE_ROOT / "examples"
 
 MODEL_BUNDLE_FILENAMES = (
     LM_ONNX_NAME,
+    FINE_LOCAL_ONNX_NAME,
     CODEC_ONNX_NAME,
     VOICES_NPZ_NAME,
     "config.json",
@@ -103,7 +103,7 @@ def get_model(
 
     Args:
         model: Local directory with ONNX assets. Ignored when ``repo_id`` is set.
-        repo_id: Hugging Face repository ID (e.g. ``org/Hojo-TTS-Light``).
+        repo_id: Hugging Face repository ID (e.g. ``HojoAI/Hojo-TTS-Light-40M``).
         cache_dir: Optional Hugging Face cache directory.
     """
     models_dir = None if repo_id else model
@@ -143,7 +143,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--voices_npz",
         default="",
-        help=f"voices.npz path (default: <onnx_dir>/{VOICES_NPZ_NAME} or {DEFAULT_VOICES})",
+        help=f"voices.npz path (default: <onnx_dir>/{VOICES_NPZ_NAME})",
     )
     parser.add_argument("--text", default="", help="Target text")
     parser.add_argument("--voice", default="", help="Opaque voice ID from voices.npz (e.g. hojo_en_m_02)")

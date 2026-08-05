@@ -104,9 +104,10 @@ Downloaded from `HojoAI/Hojo-TTS-Light-40M` (or shipped under `models/`):
 
 | File | Role |
 |------|------|
-| `Hojo-TTS-Light-40M-llm.onnx` | Unified LM (prefill + decode, KV cache) |
-| `Hojo-TTS-Light-40M-decoder.onnx` | Audio codec (tokens → spectrogram) |
-| `Hojo-TTS-Light-40M-voice.npz` | Speaker embeddings for 15 voice IDs |
+| `Hojo-TTS-Light-40M-llm.onnx` | Unified LM body (`inputs_embeds` → logits + hidden + KV; BF16 on disk) |
+| `Hojo-TTS-Light-40M-fine_local.onnx` | Coarse embeddings + hidden → tokens logits (BF16 on disk) |
+| `Hojo-TTS-Light-40M-decoder.onnx` | tokens → spectrogram mag/phase (FP32) |
+| `Hojo-TTS-Light-40M-voice.npz` | Voices IDs |
 | `tokenizer.json` / `tokenizer_config.json` | Tokenizer |
 | `config.json` | LM config (`num_hidden_layers`, `max_position_embeddings`) |
 
@@ -116,11 +117,12 @@ Tensor shapes, initializer counts, and architecture notes: [`models/README.md`](
 
 | Component | Params | ~M |
 |-----------|--------|-----|
-| `Hojo-TTS-Light-40M-llm.onnx` | 40,392,320 | 40.39 |
-| `Hojo-TTS-Light-40M-decoder.onnx` | 32,797,906 | 32.80 |
-| **Total** | **73,190,226** | **73.19** |
+| `Hojo-TTS-Light-40M-llm.onnx` | 31,337,600 | 31.34 |
+| `Hojo-TTS-Light-40M-fine_local.onnx` | 13,296,256 | 13.30 |
+| `Hojo-TTS-Light-40M-decoder.onnx` | 30,910,594 | 30.91 |
+| **Total** | **75,544,450** | **75.55** |
 
-Bundle on disk: ~**220 MB** (weights + tokenizer + voices).
+Bundle on disk: ~**236 MB** (weights + tokenizer + voice.npz).  
 
 ## Layout
 
@@ -148,16 +150,16 @@ Bundle on disk: ~**220 MB** (weights + tokenizer + voices).
 
 ## Performance (reference, CPU)
 
-Short English sentence (~6.4 s audio, `hojo_en_m_02`), Linux server:
+Short English sentence (~6.3 s audio, `hojo_en_m_02`), Linux server:
 
 | Metric | 1 thread | 20 threads |
 |--------|----------|------------|
-| RTF | ~0.81× | ~0.46× |
-| Peak RSS | ~410 MB | ~453 MB |
+| RTF | ~0.71× | ~0.28× |
+| Peak RSS | ~750 MB | ~750 MB |
 
-Long-form (~19–20 s audio, ~940 LM tokens): RTF ~0.92× / ~0.46×, Peak RSS ~512 MB / ~563 MB.
+Long-form (~27 s audio, ~1420 LM tokens): RTF ~1.02× / ~0.59×, Peak RSS ~1.2 GB / ~1.2 GB.
 
-RTF = wall-clock time ÷ output audio duration (< 1 = faster than realtime). Set ORT threads via `onnx_model.configure_cpu_threads(n)` before loading the model.
+RTF = wall-clock time ÷ output audio duration (< 1 = faster than realtime). Set ORT threads via `HojoTTSLightOnnx(..., num_threads=n)` when constructing the runtime. LM / FineLocal BF16 weights are promoted to FP32 in memory at load (ORT CPU), so RSS is higher than on-disk size.
 
 ## License
 
