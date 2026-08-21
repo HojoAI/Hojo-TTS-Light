@@ -26,7 +26,23 @@ VOICES_NPZ_NAME = "Hojo-TTS-Light-voice.npz"
 OUTPUT_SAMPLE_RATE = 24000
 CODEC_SAMPLE_RATE = 16000
 DEFAULT_TEMPERATURE = 0.8
-DEFAULT_SPEAKER_SECONDS = 6.0
+
+# Speaker preprocessing 
+SPEAKER_MEL_DIM = 128
+SPEAKER_EMB_DIM = 2048
+SPEAKER_EMB_SECONDS = 6.0
+SPEAKER_MEL_N_FFT = 1024
+SPEAKER_MEL_HOP_SIZE = 256
+SPEAKER_MEL_WIN_SIZE = 1024
+SPEAKER_MEL_FMIN = 0
+SPEAKER_MEL_FMAX = 12000
+
+# Decoder ISTFT / token 
+CODEC_HOP_LENGTH = 480
+CODEC_N_FFT = 1920
+CODEC_SAMPLES_PER_TOKEN = CODEC_HOP_LENGTH
+
+DEFAULT_SPEAKER_SECONDS = SPEAKER_EMB_SECONDS
 
 REF_TEXT_START_TOKEN = "[ref_text_start]"
 REF_TEXT_END_TOKEN = "[ref_text_end]"
@@ -487,14 +503,12 @@ class HojoTTSLightOnnx:
 
         with open(os.path.join(self.models_dir, "config.json"), encoding="utf-8") as f:
             self.num_layers = int(json.load(f)["num_hidden_layers"])
-        with open(os.path.join(self.models_dir, "speaker_meta.json"), encoding="utf-8") as f:
-            self.speaker_meta = json.load(f)
-        with open(os.path.join(self.models_dir, "codec_meta.json"), encoding="utf-8") as f:
-            codec_meta = json.load(f)
 
-        hop = int(codec_meta.get("hop_length", 480))
-        n_fft = int(codec_meta.get("n_fft", hop * 4))
-        self.istft = _ISTFT(n_fft=n_fft, hop_length=hop, win_length=n_fft)
+        self.istft = _ISTFT(
+            n_fft=CODEC_N_FFT,
+            hop_length=CODEC_HOP_LENGTH,
+            win_length=CODEC_N_FFT,
+        )
 
         enc_in = self.codec_encoder.get_inputs()[0]
         self.enc_input_name = enc_in.name
@@ -509,20 +523,17 @@ class HojoTTSLightOnnx:
         return self.codec_encoder.run(None, {self.enc_input_name: wav})[0].reshape(-1).astype(np.int64)
 
     def _encode_speaker(self, ref_wav_path: str) -> np.ndarray:
-        meta = self.speaker_meta
-        target_sr = int(meta["sample_rate"])
-        seconds = float(meta.get("speaker_emb_seconds", DEFAULT_SPEAKER_SECONDS))
         wav, sr = sf.read(ref_wav_path, dtype="float32", always_2d=False)
-        wav = _prepare_speaker_wav(wav, int(sr), target_sr, seconds)
+        wav = _prepare_speaker_wav(wav, int(sr), OUTPUT_SAMPLE_RATE, SPEAKER_EMB_SECONDS)
         mels = _mel_spectrogram(
             torch.from_numpy(wav).unsqueeze(0),
-            n_fft=int(meta.get("mel_n_fft", 1024)),
-            num_mels=int(meta["mel_dim"]),
-            sampling_rate=target_sr,
-            hop_size=int(meta.get("mel_hop_size", 256)),
-            win_size=int(meta.get("mel_win_size", 1024)),
-            fmin=int(meta.get("mel_fmin", 0)),
-            fmax=int(meta.get("mel_fmax", 12000)),
+            n_fft=SPEAKER_MEL_N_FFT,
+            num_mels=SPEAKER_MEL_DIM,
+            sampling_rate=OUTPUT_SAMPLE_RATE,
+            hop_size=SPEAKER_MEL_HOP_SIZE,
+            win_size=SPEAKER_MEL_WIN_SIZE,
+            fmin=SPEAKER_MEL_FMIN,
+            fmax=SPEAKER_MEL_FMAX,
         ).transpose(1, 2)
         mel_in = self.speaker_encoder.get_inputs()[0].name
         return self.speaker_encoder.run(None, {mel_in: mels.numpy().astype(np.float32)})[0].astype(np.float32)

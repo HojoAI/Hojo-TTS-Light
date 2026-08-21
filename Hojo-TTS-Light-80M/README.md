@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 ```bash
 pip install -U "huggingface_hub[cli]"
-hf download HojoAI/Hojo-TTS-Light   --repo-type model   --local-dir ./onnx
+hf download HojoAI/Hojo-TTS-Light   --repo-type model   --local-dir ./models
 ```
 
 ### Run Inference
