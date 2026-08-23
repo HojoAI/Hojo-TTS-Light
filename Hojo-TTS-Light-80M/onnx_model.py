@@ -174,8 +174,12 @@ def _ort_model_source(model_path: str, *, promote_bf16_for_cpu: bool):
         return model_path
     try:
         import onnx
-    except ImportError:
-        return model_path
+    except ImportError as exc:
+        raise RuntimeError(
+            "The 'onnx' package is required to promote the published BF16 "
+            "model graph for CPU inference. Install "
+            "Hojo-TTS-Light-80M/requirements.txt or run 'pip install onnx'."
+        ) from exc
     model = onnx.load(model_path, load_external_data=True)
     if not _onnx_contains_bfloat16(model):
         return model_path

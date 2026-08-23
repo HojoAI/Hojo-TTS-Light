@@ -12,13 +12,16 @@ https://github.com/user-attachments/assets/79023517-80e3-4d67-837e-c4b4f9367a0b
 - **15 voices** via opaque IDs in `Hojo-TTS-Light-40M-voice.npz` (e.g. `hojo_en_m_02`)
 - **CPU or GPU** (ONNX Runtime)
 - **Up to 4096 LM tokens** per utterance (`max_position_embeddings` in `config.json`)
-- Dependencies: `numpy`, `soundfile`, `tokenizers`, `onnxruntime`, `huggingface_hub` (for `--repo-id` / `hf download`)
+- Dependencies: `numpy`, `soundfile`, `tokenizers`, `onnx`, `onnxruntime`, `huggingface_hub` (for `--repo-id` / `hf download`), and SOCKS proxy support
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
 ```
+
+The requirements include `httpx[socks]`, so `--repo-id` also works when
+`HTTP_PROXY`, `HTTPS_PROXY`, or `ALL_PROXY` points to a SOCKS proxy.
 
 ### Get models
 
@@ -76,7 +79,8 @@ tts.generate_to_file("Hello.", "out.wav", voice="hojo_en_m_02")
 
 ## Voices
 
-Use `--voice` with one of the opaque IDs below (`hojo_{lang}_{sex}_{nn}`; `sex` is `f` / `m` in the ID, `female` / `male` in the table):
+Use `--voice` with one of the opaque IDs below (`hojo_{lang}_{sex}_{nn}`;
+`sex` is `f` / `m` / `u` in the ID, where `u` means unspecified):
 
 | Voice ID | Language | Sex |
 |----------|----------|-----|
@@ -89,12 +93,12 @@ Use `--voice` with one of the opaque IDs below (`hojo_{lang}_{sex}_{nn}`; `sex` 
 | `hojo_en_f_05` | en | female |
 | `hojo_en_f_06` | en | female |
 | `hojo_en_f_07` | en | female |
-| `hojo_en_f_08` | en | female |
 | `hojo_en_m_01` | en | male |
 | `hojo_en_m_02` | en | male |
 | `hojo_en_m_03` | en | male |
 | `hojo_en_m_04` | en | male |
 | `hojo_en_m_05` | en | male |
+| `hojo_en_u_01` | en | unspecified |
 
 Default voice: **`hojo_en_m_02`**.
 
