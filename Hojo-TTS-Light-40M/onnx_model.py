@@ -157,8 +157,12 @@ def _ort_model_source(model_path: str):
     """
     try:
         import onnx
-    except ImportError:
-        return model_path
+    except ImportError as exc:
+        raise RuntimeError(
+            "The 'onnx' package is required to load the published BF16 model "
+            "bundle. Install Hojo-TTS-Light-40M/requirements.txt or run "
+            "'pip install onnx'."
+        ) from exc
 
     model = onnx.load(model_path, load_external_data=True)
     if not _onnx_contains_bfloat16(model):

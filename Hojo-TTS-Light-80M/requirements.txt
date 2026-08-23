@@ -1,8 +1,13 @@
-numpy==1.24.4
-onnxruntime==1.23.2
-optimum==2.1.0
-optimum-onnx==0.1.0
-soundfile==0.13.1
-torch==2.8.0+cu128
-torchaudio==2.8.0+cu128
-transformers==5.2.0
+# Runtime dependencies for Python 3.12 and CPU inference.
+# For CUDA-specific ONNX Runtime and PyTorch installation, see README.md.
+numpy>=1.26
+onnx>=1.16
+onnxruntime>=1.23
+soundfile>=0.13
+torch>=2.8
+librosa>=0.11
+scipy>=1.11
+tokenizers>=0.15
+huggingface_hub>=0.34
+# Supports `hf download` when a socks:// proxy is configured.
+httpx[socks]>=0.23
