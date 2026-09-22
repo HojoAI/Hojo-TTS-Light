@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 
+from text_normalization import normalize_text
+
 RELEASE_ROOT = Path(__file__).resolve().parent
 DEFAULT_MODELS_DIR = RELEASE_ROOT / "models"
 LM_ONNX_NAME = "Hojo-TTS-Light-40M-llm.onnx"
@@ -186,6 +188,7 @@ def _build_ort_session(
 
 
 def build_speaker_prompt(text: str) -> str:
+    text = normalize_text(text)
     placeholders = "".join(SPEAKER_PLACEHOLDER_TOKENS)
     return (
         f"{TARGET_TEXT_START_TOKEN}{text}{TARGET_TEXT_END_TOKEN}"
