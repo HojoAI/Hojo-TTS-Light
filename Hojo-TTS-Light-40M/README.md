@@ -74,6 +74,22 @@ wav = tts.generate("Hello.", voice="hojo_en_m_02")
 tts.generate_to_file("Hello.", "out.wav", voice="hojo_en_m_02")
 ```
 
+### Pinyin
+
+Force a pronunciation with `<zh_{syllable}{tone}>` tokens (`tone` is `1`–`4`, `5` is neutral). They can replace one character or a whole span, and can be mixed with ordinary Chinese. Text normalization leaves the tone digits inside these tokens unchanged.
+
+```bash
+python infer.py \
+  --onnx_dir ./models \
+  --text "今天<zh_tian1>气怎么样。" \
+  --voice hojo_zh_f_01 \
+  --output_path examples/outputs/demo_pinyin.wav
+```
+
+### Text normalization
+
+`infer.py` normalizes `--text` with [WeTextProcessing](https://github.com/wenet-e2e/WeTextProcessing) before synthesis. `--tn_lang` defaults to `auto` (CJK → Chinese TN, otherwise English). Use `--tn_lang zh|en` to force a language, or `--no_tn` to skip.
+
 ## Voices
 
 Use `--voice` with one of the opaque IDs below (`hojo_{lang}_{sex}_{nn}`; `sex` is `f` / `m` in the ID, `female` / `male` in the table):

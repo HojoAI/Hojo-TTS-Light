@@ -59,6 +59,23 @@ python infer.py \
   --output_path ./assets/out.wav
 ```
 
+Force a pronunciation with `<zh_{syllable}{tone}>` tokens (`tone` is `1`–`4`, `5` is neutral). They can replace one character or a whole span, and can be mixed with ordinary Chinese:
+
+```bash
+python infer.py \
+  --onnx_dir ./models \
+  --prompt_speech ./assets/zh1.wav \
+  --prompt_text "现在的外卖确实坑多，要不咱换家稍微贵点的？可能品质好点。" \
+  --text "今天<zh_tian1>气怎么样。" \
+  --output_path ./assets/out_pinyin.wav
+```
+
+Text normalization still runs on the rest of the sentence. Tone digits inside `<zh_*>` tokens are kept (`<zh_tian1>` stays `<zh_tian1>`).
+
+### Text normalization
+
+`infer.py` normalizes `--text` with [WeTextProcessing](https://github.com/wenet-e2e/WeTextProcessing) before synthesis (`--prompt_text` is unchanged). `--tn_lang` defaults to `auto` (CJK → Chinese TN, otherwise English). Use `--tn_lang zh|en` to force a language, or `--no_tn` to skip.
+
 ## Commercial Support
 
 We offer commercial support for teams integrating Hojo TTS into their products. This includes integration assistance, custom voice development, and enterprise licensing.

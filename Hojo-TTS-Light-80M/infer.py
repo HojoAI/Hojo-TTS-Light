@@ -13,6 +13,7 @@ from onnx_model import (
     HojoTTSLightOnnx,
     configure_cpu_threads,
 )
+from text_normalize import normalize_text
 
 
 def _parse_args() -> argparse.Namespace:
@@ -28,6 +29,17 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt_speech", default="", help="Reference wav path")
     parser.add_argument("--prompt_text", default="", help="Reference transcript")
     parser.add_argument("--text", default="", help="Target text")
+    parser.add_argument(
+        "--tn_lang",
+        choices=("auto", "zh", "en"),
+        default="auto",
+        help="WeTextProcessing language (default: auto, CJK -> zh else en)",
+    )
+    parser.add_argument(
+        "--no_tn",
+        action="store_true",
+        help="Skip text normalization before synthesis",
+    )
     parser.add_argument("--output_path", default="", help="Output wav path")
     parser.add_argument("--max_new_tokens", type=int, default=2048)
     parser.add_argument("--min_new_tokens", type=int, default=10)
@@ -52,6 +64,12 @@ def main() -> None:
     if args.num_threads > 0:
         configure_cpu_threads(args.num_threads)
 
+    target_text = args.text
+    if not args.no_tn:
+        target_text = normalize_text(args.text, language=args.tn_lang)
+        if target_text != args.text:
+            print(f"TN: {args.text!r} -> {target_text!r}")
+
     onnx_dir = args.onnx_dir or str(DEFAULT_MODELS_DIR)
     tts = HojoTTSLightOnnx(
         onnx_dir,
@@ -60,7 +78,7 @@ def main() -> None:
         num_threads=args.num_threads,
     )
     wav = tts.generate(
-        args.text,
+        target_text,
         prompt_speech=args.prompt_speech,
         prompt_text=args.prompt_text,
         max_new_tokens=args.max_new_tokens,

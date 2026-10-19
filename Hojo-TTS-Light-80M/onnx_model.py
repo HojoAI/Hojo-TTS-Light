@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import ast
+import io
 import json
 import math
 import os
+import pickletools
 import re
+import zipfile
 from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
 import soundfile as sf
-import torch
 from librosa.filters import mel as librosa_mel_fn
 
 RELEASE_ROOT = Path(__file__).resolve().parent
@@ -200,9 +203,10 @@ def _build_ort_session(
     if num_threads > 0:
         so.intra_op_num_threads = num_threads
         so.inter_op_num_threads = num_threads
-    promote_bf16 = provider != "cuda"
+    # CUDA 1.21 has no BF16 QuickGelu kernel; 1.25 fails assigning the
+    # decoder Greater node. Promote BF16 weights to FP32 for every provider.
     return ort.InferenceSession(
-        _ort_model_source(model_path, promote_bf16_for_cpu=promote_bf16),
+        _ort_model_source(model_path, promote_bf16_for_cpu=True),
         sess_options=so,
         providers=providers,
     )
@@ -233,14 +237,86 @@ class _PromptTokenizer:
         return np.array([encoded.ids], dtype=np.int64)
 
 
+def _npy_header(raw: bytes) -> tuple[dict, int]:
+    if not raw.startswith(b"\x93NUMPY"):
+        raise ValueError("voice npz member is not an .npy array")
+    major = raw[6]
+    if major == 1:
+        header_len = int.from_bytes(raw[8:10], "little")
+        start = 10
+    else:
+        header_len = int.from_bytes(raw[8:12], "little")
+        start = 12
+    header = ast.literal_eval(raw[start : start + header_len].decode("latin1").strip())
+    return header, start + header_len
+
+
+def _is_object_descr(descr: object) -> bool:
+    return isinstance(descr, str) and (descr == "O" or descr.startswith("|O"))
+
+
+def _voice_ids_from_object_npy(raw: bytes) -> list[str]:
+    """Read a 1-d object array of strings without unpickling it."""
+    header, payload_at = _npy_header(raw)
+    shape = header.get("shape")
+    if not isinstance(shape, tuple) or len(shape) != 1:
+        raise ValueError("voice_ids object array must be 1-d")
+    count = int(shape[0])
+    unicode_ops = {"SHORT_BINUNICODE", "BINUNICODE", "BINUNICODE8", "UNICODE"}
+    lists: list[list[str]] = []
+    current: list[str] | None = None
+    for opcode, arg, _pos in pickletools.genops(raw[payload_at:]):
+        name = opcode.name
+        if name == "EMPTY_LIST":
+            current = []
+            continue
+        if current is None:
+            continue
+        if name in unicode_ops:
+            if not isinstance(arg, str):
+                raise ValueError("voice_ids pickle string is not text")
+            current.append(arg)
+            continue
+        if name in {"MEMOIZE", "MARK"}:
+            continue
+        if name == "APPENDS":
+            lists.append(current)
+            current = None
+            continue
+        raise ValueError(f"refusing voice_ids pickle opcode {name}")
+    matches = [ids for ids in lists if len(ids) == count]
+    if len(matches) != 1:
+        raise ValueError("voice_ids object array is not a plain string list")
+    return matches[0]
+
+
+def _load_npz_without_pickle(path: str) -> dict[str, np.ndarray | list[str]]:
+    """Load an .npz of numeric arrays. Object arrays are refused, except voice_ids."""
+    arrays: dict[str, np.ndarray | list[str]] = {}
+    with zipfile.ZipFile(path) as archive:
+        for info in archive.infolist():
+            if info.is_dir() or not info.filename.endswith(".npy"):
+                continue
+            key = info.filename[: -len(".npy")]
+            raw = archive.read(info)
+            header, _payload_at = _npy_header(raw)
+            if _is_object_descr(header.get("descr")):
+                if key != "voice_ids":
+                    raise ValueError(f"{key} is a pickled object array and was refused")
+                arrays[key] = _voice_ids_from_object_npy(raw)
+                continue
+            arrays[key] = np.load(io.BytesIO(raw), allow_pickle=False)
+    return arrays
+
+
 def _load_token_embedding(models_dir: str) -> np.ndarray:
     npz_path = os.path.join(models_dir, VOICES_NPZ_NAME)
     if not os.path.isfile(npz_path):
         raise FileNotFoundError(f"Missing [{npz_path}] ({VOICES_NPZ_NAME}).")
-    with np.load(npz_path, allow_pickle=True) as data:
-        if "token_embedding" not in data:
-            raise ValueError(f"{VOICES_NPZ_NAME} must contain key token_embedding.")
-        return np.asarray(data["token_embedding"], dtype=np.float32)
+    data = _load_npz_without_pickle(npz_path)
+    if "token_embedding" not in data:
+        raise ValueError(f"{VOICES_NPZ_NAME} must contain key token_embedding.")
+    return np.asarray(data["token_embedding"], dtype=np.float32)
 
 
 def _resample_mono(wav: np.ndarray, src_sr: int, dst_sr: int) -> np.ndarray:
@@ -347,7 +423,7 @@ def _sample_next_token(
 
 
 def _mel_spectrogram(
-    waveform: torch.Tensor,
+    waveform: np.ndarray,
     *,
     n_fft: int,
     num_mels: int,
@@ -356,27 +432,35 @@ def _mel_spectrogram(
     win_size: int,
     fmin: int,
     fmax: int,
-) -> torch.Tensor:
-    device = waveform.device
-    mel = librosa_mel_fn(sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax)
-    mel_basis = torch.from_numpy(mel).float().to(device)
-    hann_window = torch.hann_window(win_size).to(device)
+) -> np.ndarray:
+    """Log-mel matching ``torch.stft`` (periodic Hann, ``center=False``, reflect pad)."""
+    waveform = np.asarray(waveform, dtype=np.float32)
+    if waveform.ndim == 1:
+        waveform = waveform[None, :]
+    if win_size != n_fft:
+        raise ValueError(f"win_size ({win_size}) must equal n_fft ({n_fft}).")
+    mel_basis = librosa_mel_fn(
+        sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax
+    ).astype(np.float32)
+    # periodic Hann, same as torch.hann_window(win_size)
+    window = (
+        0.5
+        - 0.5 * np.cos(2.0 * np.pi * np.arange(win_size, dtype=np.float32) / float(win_size))
+    ).astype(np.float32)
     padding = (n_fft - hop_size) // 2
-    y = torch.nn.functional.pad(waveform.unsqueeze(1), (padding, padding), mode="reflect").squeeze(1)
-    spec = torch.stft(
-        y,
-        n_fft,
-        hop_length=hop_size,
-        win_length=win_size,
-        window=hann_window,
-        center=False,
-        pad_mode="reflect",
-        normalized=False,
-        onesided=True,
-        return_complex=True,
-    )
-    spec = torch.sqrt(torch.view_as_real(spec).pow(2).sum(-1) + 1e-9)
-    return torch.log(torch.clamp(torch.matmul(mel_basis, spec), min=1e-5))
+    y = np.pad(waveform, ((0, 0), (padding, padding)), mode="reflect")
+    n_frames = 1 + (y.shape[1] - n_fft) // hop_size
+    if n_frames <= 0:
+        raise ValueError("speaker waveform is shorter than n_fft after padding.")
+    spec = np.empty((waveform.shape[0], n_fft // 2 + 1, n_frames), dtype=np.float32)
+    offsets = np.arange(n_frames, dtype=np.int64) * hop_size
+    bins = np.arange(n_fft, dtype=np.int64)
+    for batch in range(y.shape[0]):
+        frames = y[batch, offsets[:, None] + bins[None, :]] * window
+        fft = np.fft.rfft(frames, n=n_fft, axis=1)
+        power = fft.real.astype(np.float32) ** 2 + fft.imag.astype(np.float32) ** 2
+        spec[batch] = np.sqrt(power + 1e-9).T
+    return np.log(np.maximum(mel_basis @ spec, 1e-5)).astype(np.float32)
 
 
 def _prepare_speaker_wav(wav: np.ndarray, sr: int, target_sr: int, seconds: float) -> np.ndarray:
@@ -526,7 +610,7 @@ class HojoTTSLightOnnx:
         wav, sr = sf.read(ref_wav_path, dtype="float32", always_2d=False)
         wav = _prepare_speaker_wav(wav, int(sr), OUTPUT_SAMPLE_RATE, SPEAKER_EMB_SECONDS)
         mels = _mel_spectrogram(
-            torch.from_numpy(wav).unsqueeze(0),
+            wav,
             n_fft=SPEAKER_MEL_N_FFT,
             num_mels=SPEAKER_MEL_DIM,
             sampling_rate=OUTPUT_SAMPLE_RATE,
@@ -534,9 +618,12 @@ class HojoTTSLightOnnx:
             win_size=SPEAKER_MEL_WIN_SIZE,
             fmin=SPEAKER_MEL_FMIN,
             fmax=SPEAKER_MEL_FMAX,
-        ).transpose(1, 2)
+        )
+        mels = np.transpose(mels, (0, 2, 1))
         mel_in = self.speaker_encoder.get_inputs()[0].name
-        return self.speaker_encoder.run(None, {mel_in: mels.numpy().astype(np.float32)})[0].astype(np.float32)
+        return self.speaker_encoder.run(None, {mel_in: np.ascontiguousarray(mels, dtype=np.float32)})[0].astype(
+            np.float32
+        )
 
     def _generate_coarse_tokens(
         self,
