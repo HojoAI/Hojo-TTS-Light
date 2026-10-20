@@ -2,6 +2,8 @@
 
 ## Hojo-TTS-Light-80M
 
+Arabic numerals, decimals, and `%` are expanded before tokenization in English and Chinese text.
+
 ## Demo
 
 **Code-switching Male Voice**
