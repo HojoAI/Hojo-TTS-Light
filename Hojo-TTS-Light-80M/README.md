@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/8501450e-4942-4eea-a8d9-4923d42a7bba
 
 ```bash
 git clone https://github.com/HojoAI/Hojo-TTS-Light.git
-cd Hojo-TTS-Light
+cd Hojo-TTS-Light/Hojo-TTS-Light-80M
 # Create a conda environment named hojo-tts with Python 3.12
 conda create -n hojo-tts python=3.12 -y
 
@@ -41,11 +41,18 @@ conda activate hojo-tts
 pip install -r requirements.txt
 ```
 
+The default requirements install the CPU builds used by the command below. For
+CUDA, replace `onnxruntime` with `onnxruntime-gpu`, install the PyTorch build
+matching your CUDA version from the
+[PyTorch installation guide](https://pytorch.org/get-started/locally/), and add
+`--provider cuda` to the inference command.
+
 ### Download ONNX Models from HuggingFace
 
 ```bash
-pip install -U "huggingface_hub[cli]"
-hf download HojoAI/Hojo-TTS-Light   --repo-type model   --local-dir ./models
+hf download HojoAI/Hojo-TTS-Light \
+  --repo-type model \
+  --local-dir ./models
 ```
 
 ### Run Inference

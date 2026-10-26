@@ -1,10 +1,7 @@
-# TTS ONNX inference (infer.py / onnx_model.py)
-# Python >=3.10,<3.13  (tested on 3.12)
-# Install onnxruntime (CPU) OR onnxruntime-gpu (CUDA), not both.
-#
-# onnx is required: BF16 weights are promoted to FP32 at load.
-# GPU checked on CUDA 12.8 with onnxruntime-gpu 1.21.1 and 1.25.0.
-# Share this env with 80M: use 1.21.1 (1.25 breaks the 80M decoder on CUDA).
+# Hojo-TTS-Light-40M ONNX inference (infer.py / onnx_model.py)
+# Python >=3.10,<3.13 (tested on 3.12)
+# Install ONE of onnxruntime (CPU) or onnxruntime-gpu (CUDA), not both.
+# BF16 weights are promoted to FP32 at load. CUDA 12.8 tested with ORT 1.21.1.
 
 numpy>=1.26.4,<2
 soundfile>=0.13.1
@@ -18,3 +15,5 @@ onnxruntime==1.21.1
 # onnxruntime-gpu==1.21.1
 
 huggingface_hub>=0.33.0
+# Required when HTTP(S)_PROXY or ALL_PROXY uses a socks:// URL.
+httpx[socks]>=0.23
