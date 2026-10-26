@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import ast
+import io
 import json
 import os
+import pickletools
 import re
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -189,6 +193,78 @@ def _build_ort_session(
     )
 
 
+def _npy_header(raw: bytes) -> tuple[dict, int]:
+    if not raw.startswith(b"\x93NUMPY"):
+        raise ValueError("voice npz member is not an .npy array")
+    major = raw[6]
+    if major == 1:
+        header_len = int.from_bytes(raw[8:10], "little")
+        start = 10
+    else:
+        header_len = int.from_bytes(raw[8:12], "little")
+        start = 12
+    header = ast.literal_eval(raw[start : start + header_len].decode("latin1").strip())
+    return header, start + header_len
+
+
+def _is_object_descr(descr: object) -> bool:
+    return isinstance(descr, str) and (descr == "O" or descr.startswith("|O"))
+
+
+def _voice_ids_from_object_npy(raw: bytes) -> list[str]:
+    """Read a 1-d object array of strings without unpickling it."""
+    header, payload_at = _npy_header(raw)
+    shape = header.get("shape")
+    if not isinstance(shape, tuple) or len(shape) != 1:
+        raise ValueError("voice_ids object array must be 1-d")
+    count = int(shape[0])
+    unicode_ops = {"SHORT_BINUNICODE", "BINUNICODE", "BINUNICODE8", "UNICODE"}
+    lists: list[list[str]] = []
+    current: list[str] | None = None
+    for opcode, arg, _pos in pickletools.genops(raw[payload_at:]):
+        name = opcode.name
+        if name == "EMPTY_LIST":
+            current = []
+            continue
+        if current is None:
+            continue
+        if name in unicode_ops:
+            if not isinstance(arg, str):
+                raise ValueError("voice_ids pickle string is not text")
+            current.append(arg)
+            continue
+        if name in {"MEMOIZE", "MARK"}:
+            continue
+        if name == "APPENDS":
+            lists.append(current)
+            current = None
+            continue
+        raise ValueError(f"refusing voice_ids pickle opcode {name}")
+    matches = [ids for ids in lists if len(ids) == count]
+    if len(matches) != 1:
+        raise ValueError("voice_ids object array is not a plain string list")
+    return matches[0]
+
+
+def _load_npz_without_pickle(path: str) -> dict[str, np.ndarray | list[str]]:
+    """Load an .npz of numeric arrays. Object arrays are refused, except voice_ids."""
+    arrays: dict[str, np.ndarray | list[str]] = {}
+    with zipfile.ZipFile(path) as archive:
+        for info in archive.infolist():
+            if info.is_dir() or not info.filename.endswith(".npy"):
+                continue
+            key = info.filename[: -len(".npy")]
+            raw = archive.read(info)
+            header, _payload_at = _npy_header(raw)
+            if _is_object_descr(header.get("descr")):
+                if key != "voice_ids":
+                    raise ValueError(f"{key} is a pickled object array and was refused")
+                arrays[key] = _voice_ids_from_object_npy(raw)
+                continue
+            arrays[key] = np.load(io.BytesIO(raw), allow_pickle=False)
+    return arrays
+
+
 def build_speaker_prompt(text: str) -> str:
     placeholders = "".join(SPEAKER_PLACEHOLDER_TOKENS)
     return (
@@ -209,7 +285,7 @@ class VoiceBank:
         voices_npz = os.path.abspath(str(voices_npz))
         if not os.path.isfile(voices_npz):
             raise FileNotFoundError(f"Missing voices file: {voices_npz}")
-        data = np.load(voices_npz, allow_pickle=True)
+        data = _load_npz_without_pickle(voices_npz)
         if "voice_ids" not in data:
             raise ValueError(
                 f"{voices_npz} must contain voice_ids; regenerate with export_speaker_onnx."

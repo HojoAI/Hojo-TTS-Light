@@ -18,6 +18,7 @@ from onnx_model import (
     VOICES_NPZ_NAME,
     HojoTTSLightOnnx,
 )
+from text_normalize import normalize_text
 
 RELEASE_ROOT = Path(__file__).resolve().parent
 
@@ -146,6 +147,17 @@ def _parse_args() -> argparse.Namespace:
         help=f"voices.npz path (default: <onnx_dir>/{VOICES_NPZ_NAME})",
     )
     parser.add_argument("--text", default="", help="Target text")
+    parser.add_argument(
+        "--tn_lang",
+        choices=("auto", "zh", "en"),
+        default="auto",
+        help="WeTextProcessing language (default: auto, CJK -> zh else en)",
+    )
+    parser.add_argument(
+        "--no_tn",
+        action="store_true",
+        help="Skip text normalization before synthesis",
+    )
     parser.add_argument("--voice", default="", help="Opaque voice ID from voices.npz (e.g. hojo_en_m_02)")
     parser.add_argument("--output_path", default="", help="Output wav path")
     return parser.parse_args()
@@ -159,6 +171,12 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing required args: {', '.join(missing)}")
 
+    target_text = args.text
+    if not args.no_tn:
+        target_text = normalize_text(args.text, language=args.tn_lang)
+        if target_text != args.text:
+            print(f"TN: {args.text!r} -> {target_text!r}")
+
     tts = get_model(
         models_dir,
         repo_id=repo_id,
@@ -166,7 +184,7 @@ def main() -> None:
         voices_npz=args.voices_npz or None,
     )
     output_path = tts.generate_to_file(
-        args.text,
+        target_text,
         args.output_path,
         voice=args.voice,
     )
