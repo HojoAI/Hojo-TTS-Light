@@ -31,7 +31,8 @@ We provided optimized ONNX model packaging file, so that users can perform speec
 - [ ] support streaming mode synthesis
 - [ ] support emotion and style control
 - [ ] support multi-lingual and multi-dialect
-
+- [X] 202610
+    - [X] fix bugs and add simple TN example.
 - [X] 202608
 	- [X] release Hojo-TTS-Light v2 Hojo-TTS-Light-80M ONNX model and inference engine, add fine local model.
 	- [X] release Hojo-TTS-Light v2 Hojo-TTS-Light-40M ONNX model and inference engine, add fine local model.
