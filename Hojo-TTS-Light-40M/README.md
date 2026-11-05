@@ -6,7 +6,7 @@ Lightweight **speaker-conditioned text-to-speech** with **15 preset voices**. Ru
 
 https://github.com/user-attachments/assets/79023517-80e3-4d67-837e-c4b4f9367a0b
 
-**Hugging Face:** [`HojoAI/Hojo-TTS-Light-40M`](https://huggingface.co/HojoAI/Hojo-TTS-Light-40M)
+**Hugging Face:** [`HojoAI/Hojo-TTS-Light-40M-V2`](https://huggingface.co/HojoAI/Hojo-TTS-Light-40M-V2)
 
 - **24 kHz** mono output
 - **15 voices** via opaque IDs in `Hojo-TTS-Light-40M-voice.npz` (e.g. `hojo_en_m_02`)
@@ -41,7 +41,7 @@ python infer.py \
 
 ```bash
 pip install -U "huggingface_hub[cli]"
-hf download HojoAI/Hojo-TTS-Light-40M --repo-type model --local-dir ./models
+hf download HojoAI/Hojo-TTS-Light-40M-V2 --repo-type model --local-dir ./models
 
 python infer.py \
   --onnx_dir ./models \
@@ -54,7 +54,7 @@ python infer.py \
 
 ```bash
 python infer.py \
-  --repo-id HojoAI/Hojo-TTS-Light-40M \
+  --repo-id HojoAI/Hojo-TTS-Light-40M-V2 \
   --text "Hello, this is a demo." \
   --voice hojo_en_m_02 \
   --output_path examples/outputs/demo.wav
@@ -65,7 +65,7 @@ python infer.py \
 ```python
 from infer import get_model
 
-HF_REPO = "HojoAI/Hojo-TTS-Light-40M"
+HF_REPO = "HojoAI/Hojo-TTS-Light-40M-V2"
 
 tts = get_model()  # default: ./models/
 # tts = get_model(repo_id=HF_REPO)
@@ -98,6 +98,8 @@ Use `--voice` with one of the opaque IDs below (`hojo_{lang}_{sex}_{nn}`; `sex` 
 |----------|----------|-----|
 | `hojo_zh_f_01` | zh | female |
 | `hojo_zh_f_02` | zh | female |
+| `hojo_zh_m_01` | zh | male |
+| `hojo_zh_m_02` | zh | male |
 | `hojo_en_f_01` | en | female |
 | `hojo_en_f_02` | en | female |
 | `hojo_en_f_03` | en | female |
@@ -116,7 +118,7 @@ Default voice: **`hojo_en_m_02`**.
 
 ## Model bundle (`models/`)
 
-Downloaded from `HojoAI/Hojo-TTS-Light-40M` (or shipped under `models/`):
+Downloaded from `HojoAI/Hojo-TTS-Light-40M-V2` (or shipped under `models/`):
 
 | File | Role |
 |------|------|
