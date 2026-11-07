@@ -1,13 +1,8 @@
 # Hojo-TTS-Light-80M ONNX inference (infer.py / onnx_model.py)
-# Python >=3.10,<3.13  (tested on 3.12)
-#
-# System: libsndfile (for soundfile), e.g. apt install libsndfile1
-#
+# Python >=3.10,<3.13 (tested on 3.12)
 # Install ONE of onnxruntime (CPU) or onnxruntime-gpu (CUDA), not both.
-#
-# GPU checked on CUDA 12.8. Pin 1.21.1:
-#   1.25 fails placing the decoder Greater node onto CUDA.
-#   1.21 has no BF16 QuickGelu kernel, so weights are promoted to FP32 at load.
+# BF16 weights are promoted to FP32 at load. CUDA 12.8 tested with ORT 1.21.1.
+# System: libsndfile (for soundfile), e.g. apt install libsndfile1
 
 numpy>=1.26.4,<2
 scipy>=1.17.1
@@ -24,3 +19,5 @@ onnxruntime==1.21.1
 
 # Optional: hf download in README (not imported at runtime)
 # huggingface_hub>=0.33.0
+# Supports hf download through a socks:// proxy if installed.
+# httpx[socks]>=0.23
