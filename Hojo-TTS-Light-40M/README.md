@@ -12,6 +12,7 @@ https://github.com/user-attachments/assets/79023517-80e3-4d67-837e-c4b4f9367a0b
 - **15 voices** via opaque IDs in `Hojo-TTS-Light-40M-voice.npz` (e.g. `hojo_en_m_02`)
 - **CPU or GPU** (ONNX Runtime)
 - **Up to 4096 LM tokens** per utterance (`max_position_embeddings` in `config.json`)
+- Arabic numerals, decimals, and `%` are expanded before tokenization in English and Chinese text.
 - Dependencies: `numpy`, `soundfile`, `tokenizers`, `onnxruntime`, `huggingface_hub` (for `--repo-id` / `hf download`)
 
 ## Quick start

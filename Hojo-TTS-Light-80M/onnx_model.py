@@ -14,6 +14,8 @@ from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
+
+from text_normalization import normalize_text
 import soundfile as sf
 from librosa.filters import mel as librosa_mel_fn
 
@@ -341,6 +343,8 @@ def _build_ref_codec_prompt(
     target_text: str,
     prompt_audio_codes: np.ndarray,
 ) -> np.ndarray:
+    ref_text = normalize_text(ref_text)
+    target_text = normalize_text(target_text)
     ref_speech_start = REF_SPEECH_START_TOKEN
     ref_speech_end = REF_SPEECH_END_TOKEN
     target_speech_start = TARGET_SPEECH_START_TOKEN
